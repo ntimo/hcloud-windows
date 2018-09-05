@@ -39,7 +39,7 @@ delete() {
   hcloud server create-image $DISPLAYNAME --type snapshot --description `date '+Windows-%Y-%m-%d_%H-%M'` || echo "[CRIT] Snapshot error" | exit 1
 
   hcloud server delete $DISPLAYNAME
-  curl -fsS "http://ipv4.dynv6.com/api/update?hostname=$hostname&ipv4=127.0.0.1&token=$token"
+  curl -fsS "https://ipv4.dynv6.com/api/update?hostname=$hostname&ipv4=127.0.0.1&token=$token"
 }
 
 # create snapshot
@@ -67,7 +67,7 @@ hcloud server create --datacenter 2 --image $SNAPID --name $DISPLAYNAME --type 5
 sleep 1
 IPV4NEW=`hcloud server list | tail -1 | grep Windows | awk '{print $4;}'`
 sleep 1
-curl -fsS "http://ipv4.dynv6.com/api/update?hostname=$hostname&ipv4=$IPV4NEW&token=$token"
+curl -fsS "https://ipv4.dynv6.com/api/update?hostname=$hostname&ipv4=$IPV4NEW&token=$token"
 
 }
 
