@@ -2,7 +2,7 @@
 
 [![Contributions welcome](https://img.shields.io/badge/contributions-welcome-orange.svg)](https://github.com/ntimo/hcloud-windows/pulls)
 
-This bash script starts a Windows server, client or Linux Machine in the [Hetzner Cloud](https://www.hetzner.com/cloud) from a snapshot. So you only pay for the snapshot (0,0119€ per GB) if you don't use it. And you only pay for the space the snapshot needs. So if you use 2GB you only pay for that 2GB. If you need 32GB RAM, 8 vCores you power it up and only pay on an hourly basis.
+This bash script starts a Windows server, client or Linux Machine in the [Hetzner Cloud](https://www.hetzner.com/cloud) from a snapshot. So you only pay for the snapshot (0,0119€ per GB) if you don't need the machine it. And you only pay for the space the snapshot needs. So if you use 2GB you only pay for that 2GB. If you need 32GB RAM, 8 vCores you power it up and only pay on an hourly basis.
 
 The script will let you start your Windows or Linux machine from a snapshot, update the [dynv6.com](https://dynv6.com/) IP, when the IP changes, manages snapshots, . When you decided to stop the server, the script creates a new snapshot and deletes the server. So you only pay for the used resources in an hourly manner.
 
@@ -12,20 +12,35 @@ The script will let you start your Windows or Linux machine from a snapshot, upd
 
 ## Setup client
 1. You need to install the hcloud cli. This can be done with:
-   - macOS with installed [Homebrew](https://brew.sh) `brew install hcloud`
-   - pre-built binaries for Linux, FreeBSD, macOS, and Windows [hcloud cli GitHub Releases](https://github.com/hetznercloud/cli/releases)
-2. After that you need to have a context called **WindowsDesktop** this can be done with: `hcloud context create WindowsDesktop`. You can change that via changing the **PROJECTNAME** variable inside the script.
-3. The default Servername the script expects is **Windows**. If you want to change that simply change **SERVERNAME** inside the script.
-3. If you don't know how to do that visit [Hetzner Wiki](https://wiki.hetzner.de/index.php/Windows_on_Cloud/en)
-3. You MAY configure your [dynv6.com](https://dynv6.com/) credentials in the script.
+   - macOS with installed [Homebrew](https://brew.sh) via `brew install hcloud`
+   - pre-built binaries for Linux, FreeBSD, macOS, and Windows via [hcloud cli GitHub Releases](https://github.com/hetznercloud/cli/releases)
+2. After that you need to have a context (Hetzner Cloud Project Name) called *WindowsDesktop* this can be done with:
+`hcloud context create WindowsDesktop`. You can change that behavior via changing the *PROJECTNAME* variable inside the script.
+3. The default Servername the script expects is *Windows*. If you want to change that simply change *SERVERNAME* inside the script.
+4. If you don't know how to do that visit [Hetzner Wiki](https://wiki.hetzner.de/index.php/Windows_on_Cloud/en)
+5. You MAY configure your [dynv6.com](https://dynv6.com/) credentials in the script.
 
 ## Setup machine
 1. Install the Windows Server, Client or Linux Machine. If you want a Windows client you need to send the ISO to Hetzner via Support Ticket.
 2. Setup the machine so that it starts without manual intervention. Windows Client and Windows Server need at least 4GB RAM so minimum is CX21. If you want to encrypt it keep in mind that you need to setup Dropbear under Linux and unter Windows you need to open the HTML5 console.
-3. Set everything up how you like it.
-4. Star it, contribute, have fun!
+3. Set up RDP, [TeamViewer](https://teamviewer.com), [AnyDesk](https://anydesk.com), etc..
+4. Set everything up how you like it.
+5. Star it, contribute, have fun!
+
+## Links
+### RDP Microsoft
+[iOS](https://itunes.apple.com/de/app/microsoft-remotedesktop/id714464092?mt=8)
+[macOS](https://itunes.apple.com/de/app/microsoft-remote-desktop-10/id1295203466?mt=12)
+[Android](https://play.google.com/store/apps/details?id=com.microsoft.rdc.android&hl=de)
+[Windows Phone, HoloLens, Windows, Hub](https://www.microsoft.com/de-de/p/microsoft-remotedesktop/9wzdncrfj3ps)
+
+### RDP other
+[ChromeOS](https://chrome.google.com/webstore/detail/chrome-rdp/cbkkbcmdlboombapidmoeolnmdacpkch)
+
 
 ## Further
+- This script currently ***ONLY SUPPORTS ONE SERVER*** per context (Project)!
+- If you change the Servername while the server is running. You guessed it, you broke it :P
 - Move the script to a location (For example /usr/local/bin), where you can execute it without changing directories.
 - In case you use the system not that often keep an eye on apt update and Windows Updates.
 - Keep in mind that Hetzner will tell you that this is not allowd.
@@ -42,13 +57,15 @@ Now you can execute windows.sh everywhere. If not check if you can execute it in
 
 Issues, Pull Requests and Wiki additions are very welcome 😊
 
-## Help menu:
- `start`    - to recreate the server from snapshot and start it.<br>
- `stop`     - to stop the server and delte it after creating a snapshot.<br>
- `snapshot` - to create a snapshot.<br>
- `status`   - to see server status.<br>
- `ip`       - to show the server IP<br>
- `updateip` - to update the DynDNS IP<br>
+## Commands
+```text
+ start    - to recreate the server from snapshot and start it.
+ stop     - to stop the server and delte it after creating a snapshot.
+ snapshot - to create a snapshot.
+ status   - to see server status.
+ ip       - to show the server IP
+ updateip - to update the dynv6.com IP
+```
 
 Have fun!
 

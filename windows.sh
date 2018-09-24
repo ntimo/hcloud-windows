@@ -1,18 +1,20 @@
 #!/bin/bash
 #set -x
 
-### SETTINGS
+### SETTINGS ###
 
 # Display name of the server how its named in your Hetzner project.
 SERVERNAME='Windows'
 PROJECTNAME='WindowsDesktop'
+DATACENTER='nbg1-dc3' #hcloud datacenter list
+SERVERTYPE='cx31' #hcloud server-type list
 
 # DNS settings
-# You need to have a dynv6.net DynDNS adress if you want to use this script please edit your details below
-HOSTNAME='please-edit.dynv6.net'
+# You need to have a dynv6.net DynDNS address if you want to use this feature
+HOSTNAME='please-edit.dynv6.net' #Hostname
 TOKEN='' #Enter Token from dynv6.net
 
-### END OF SETTINGS
+### END OF SETTINGS ###
 
 STATUS=$(hcloud server list | tail -1 | grep "$SERVERNAME" | awk '{print $3;}')
 ID=$(hcloud server list | tail -1 | grep "$SERVERNAME" | awk '{print $1;}')
@@ -20,6 +22,9 @@ IPV4=$(hcloud server list | tail -1 | grep "$SERVERNAME" | awk '{print $4;}')
 SSHKEY=$(hcloud ssh-key list | tail -1 | awk '{print $1;}')
 CONTEXT=$(hcloud context active)
 
+if [ "" ]
+
+#Check context (Project)
 if [ "$CONTEXT" != "$PROJECTNAME" ]; then
   echo "[CRIT] Aborting, wrong active Hetzner cloud context"
   echo "To see all available context's (Projects) enter hcloud context list"
@@ -29,11 +34,7 @@ fi
 
 # stop, force stop, snapshot, delete
 delete() {
-  if [ "$STATUS" == "" ]; then
-    echo "Server does not exist, to start it use ./windows.sh start"
-    exit
-  fi
-
+  status
   echo "Shuting down server"
   if ! hcloud server shutdown $SERVERNAME
   then
@@ -44,19 +45,17 @@ delete() {
   fi
 
   echo "creating snapshot..."
-  hcloud server create-image $SERVERNAME --type snapshot --description "$(date '+Windows-%Y-%m-%d_%H-%M')" || echo "[CRIT] Snapshot error" | exit 1
+  make_snapshot
 
   echo "deleting Server \"$ID\""
   hcloud server delete $SERVERNAME
-  if [[ "$TOKEN" != "" ]]; then curl -fsS "https://ipv4.dynv6.com/api/update?hostname=$HOSTNAME&ipv4=127.0.0.1&token=$TOKEN"; fi
+  IPV4="127.0.0.1"
+  updateip
 }
 
 # create snapshot
 make_snapshot() {
-  if [ "$STATUS" == "" ]; then
-    echo "Server does not exit, to start it use ./windows.sh start"
-    exit
-  fi
+  status
   hcloud server create-image $SERVERNAME --type snapshot --description "$(date '+Windows-%Y-%m-%d_%H-%M')" || echo "[CRIT] Snapshot error" | exit 1
 }
 
@@ -74,20 +73,18 @@ create() {
   fi
 
     if [ "$SSHKEY" == "" ]; then
-      hcloud server create --datacenter 2 --image "$SNAPID" --name "$SERVERNAME" --type 5
+      echo "We recommend setting up an ssh key so you won't get any emails everytime you create a new server."
+      hcloud server create --datacenter "$DATACENTER" --image "$SNAPID" --name "$SERVERNAME" --type "$SERVERTYPE"
     else
-      hcloud server create --datacenter 2 --image "$SNAPID" --name "$SERVERNAME" --type 5 --ssh-key "$SSHKEY"
+      hcloud server create --datacenter "$DATACENTER" --image "$SNAPID" --name "$SERVERNAME" --type "$SERVERTYPE" --ssh-key "$SSHKEY"
     fi
-  sleep 0.1
-  IPV4=$(hcloud server list | tail -1 | grep "$SERVERNAME" | awk '{print $4;}')
-  sleep 0.1
-  if [[ "$TOKEN" != "" ]]; then curl -fsS "https://ipv4.dynv6.com/api/update?hostname=$HOSTNAME&ipv4=$IPV4&token=$TOKEN"; fi
+  updateip
 }
 
 # check server status
 status() {
   if [ "$STATUS" == "" ]; then
-    echo "Server does not exist to start it use ./windows.sh start"
+    echo "Server does not exist! To start/create it use ./windows.sh start"
   else
     echo "Server is \"$STATUS\""
   fi
@@ -104,14 +101,16 @@ ip() {
 
 # update IP DynDNS
 updateip() {
-  if [ "$TOKEN" != "" ]; then
-    echo "You expect that I can update your dynDNS IP without credentials like Harry Potter? Sorry I can't do that for you :("
+  #Don't display this message after server creation
+  if [ "$TOKEN" != "" && "$IPV4" != "127.0.0.1" ]; then
+    echo "You expect that I can update your dynv6.com IP without credentials like Harry Potter? Sorry I can't do that for you :("
     exit 1
   elif [ "$IPV4" == "" ]; then
     echo "Server does not exist, to start it use ./windows.sh start"
   else
     curl -fsS "https://ipv4.dynv6.com/api/update?hostname=$HOSTNAME&ipv4=$IPV4&token=$TOKEN"
     echo "Updated server \"$HOSTNAME\" dynv6.com IP to \"$IPV4\""
+    echo "You can now connect :)"
   fi
 }
 
