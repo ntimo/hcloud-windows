@@ -72,7 +72,12 @@ create() {
   if [ "$SNAPID" == "" ]; then
     exit 1
   fi
+
+  if [ "$SSHKEY" == "" ]; then
+  hcloud server create --datacenter 2 --image "$SNAPID" --name "$SERVERNAME" --type 5
+  else
   hcloud server create --datacenter 2 --image "$SNAPID" --name "$SERVERNAME" --type 5 --ssh-key "$SSHKEY"
+  fi
   sleep 0.1
   IPV4=$(hcloud server list | tail -1 | grep "$SERVERNAME" | awk '{print $4;}')
   sleep 0.1
