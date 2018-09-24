@@ -63,7 +63,7 @@ make_snapshot() {
 # create from snapshot, update DNS
 create() {
   if [ "$2" == "latest" ]; then
-    hcloud image list | grep snapshot | grep Windows
+    hcloud image list | grep snapshot | grep $SERVERNAME
     read -n 1 -p -r "Select Snapshot ID: \"$SNAPID\""
   else
     SNAPID=$(hcloud image list | grep snapshot | grep "$SERVERNAME" | tail -1 | awk '{print $1;}')
@@ -73,11 +73,11 @@ create() {
     exit 1
   fi
 
-  if [ "$SSHKEY" == "" ]; then
-  hcloud server create --datacenter 2 --image "$SNAPID" --name "$SERVERNAME" --type 5
-  else
-  hcloud server create --datacenter 2 --image "$SNAPID" --name "$SERVERNAME" --type 5 --ssh-key "$SSHKEY"
-  fi
+    if [ "$SSHKEY" == "" ]; then
+      hcloud server create --datacenter 2 --image "$SNAPID" --name "$SERVERNAME" --type 5
+    else
+      hcloud server create --datacenter 2 --image "$SNAPID" --name "$SERVERNAME" --type 5 --ssh-key "$SSHKEY"
+    fi
   sleep 0.1
   IPV4=$(hcloud server list | tail -1 | grep "$SERVERNAME" | awk '{print $4;}')
   sleep 0.1
