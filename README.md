@@ -2,21 +2,22 @@
 
 [![Contributions welcome](https://img.shields.io/badge/contributions-welcome-orange.svg)](https://github.com/ntimo/hcloud-windows/pulls)
 
-This bash script starts a Windows server, client or Linux Machine in the Hetzner Cloud from a snapshot. So you only pay for the snapshot (0,01€ per GB) if you don't use it. If you need 32GB RAM, 8 vCores you power it up and only pay on an hourly basis.
+This bash script starts a Windows server, client or Linux Machine in the [Hetzner Cloud](https://www.hetzner.com/cloud) from a snapshot. So you only pay for the snapshot (0,0119€ per GB) if you don't use it. And you only pay for the space the snapshot needs. So if you use 2GB you only pay for that 2GB. If you need 32GB RAM, 8 vCores you power it up and only pay on an hourly basis.
 
-The script will let you start your Windows or Linux machine from a snapshot, update the (dynv6.com)[https://dynv6.com/] IP, when the IP changes, manages snapshots, . When you decided to stop the server, the script creates a new snapshot and deletes the server. So you only pay for the used resources in an hourly manner.
+The script will let you start your Windows or Linux machine from a snapshot, update the [dynv6.com](https://dynv6.com/) IP, when the IP changes, manages snapshots, . When you decided to stop the server, the script creates a new snapshot and deletes the server. So you only pay for the used resources in an hourly manner.
 
 ## Requirements
-1. A hetzner.com account
+1. A [hetzner.com](hetzner.com) account with valid address and payment information. You may be asked for your identity because it is postpaid. If they may skip it or please redact everything which is not absolutly needed like serialnumbers, face, issuing date, signature, hight, eye collor, etc.
 
 
 ## Setup client
-1. You need to install the hcloud cli this can be done with:
-  - macOS with installed (Homebrew)[https://brew.sh] `brew install hcloud`
-  - pre-built binaries for Linux, FreeBSD, macOS, and Windows https://github.com/hetznercloud/cli/releases
-2. After that you will need to have add a context called WindowsDesktop this can be done with: `hcloud context create WindowsDesktop`. You can change that via changing the PROJECTNAME variable.
-3. You may configure your (dynv6.com)[https://dynv6.com/] credentials in the script.
-4. You need to have an already installed Windows Machine in your Hetzner Cloud project called `Windows`. Otherwise change the variable SERVERNAME
+1. You need to install the hcloud cli. This can be done with:
+   - macOS with installed [Homebrew](https://brew.sh) `brew install hcloud`
+   - pre-built binaries for Linux, FreeBSD, macOS, and Windows [hcloud cli GitHub Releases](https://github.com/hetznercloud/cli/releases)
+2. After that you need to have a context called **WindowsDesktop** this can be done with: `hcloud context create WindowsDesktop`. You can change that via changing the **PROJECTNAME** variable inside the script.
+3. The default Servername the script expects is **Windows**. If you want to change that simply change **SERVERNAME** inside the script.
+3. If you don't know how to do that visit [Hetzner Wiki](https://wiki.hetzner.de/index.php/Windows_on_Cloud/en)
+3. You MAY configure your [dynv6.com](https://dynv6.com/) credentials in the script.
 
 ## Setup machine
 1. Install the Windows Server, Client or Linux Machine. If you want a Windows client you need to send the ISO to Hetzner via Support Ticket.
