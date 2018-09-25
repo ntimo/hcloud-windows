@@ -38,30 +38,57 @@ delete() {
   echo "Shuting down server"
   if ! hcloud server shutdown $SERVERNAME
   then
-    echo "ACPI (button Press) timeout. We now wait 60 seconds then we switch off the power."
+    echo "ACPI (power button Press) timeout. We now wait 180 seconds then we switch off the power."
     echo "If you don't want that press Ctrl-C, save everything, shut it down and repeat the script."
-    sleep 60
+    echo "Please make sure that there is no update installing right now!"
+    sleep 180
     hcloud server poweroff $SERVERNAME
   fi
 
-  echo "creating snapshot..."
+  echo "Creating snapshot..."
   make_snapshot
 
-  echo "deleting Server \"$ID\""
+  echo "Deleting Server \"$ID\""
   hcloud server delete $SERVERNAME
-  IPV4="127.0.0.1"
+  IPV4="127.0.0.1" #Overwrite IP server is gone
   updateip
 }
 
 # create snapshot
 make_snapshot() {
   status
-  hcloud server create-image $SERVERNAME --type snapshot --description "$(date '+Windows-%Y-%m-%d_%H-%M')" || echo "[CRIT] Snapshot error" | exit 1
+  for i in $(seq 1 11)
+  do
+    if ! hcloud server create-image $SERVERNAME --type snapshot --description "$(date '+Windows-%Y-%m-%d_%H-%M')"
+    then
+      echo "[CRIT] Snapshot creation failed!"
+      recovery "$i"
+    else
+      continue
+    fi
+  done
+}
+
+recovery () {
+  if ! ping -q -c 1 api.hetzner.cloud > /dev/null; then echo "[CRIT] Unable to ping Hetzner API!"; fi
+  if [ "$1" == "10" ]
+  then
+    echo "[FATAL ERROR] ABORTING! I AM SO SORRY. I was not able to recover from this bad situation."
+    echo "[FATAL ERROR] Please check status.hetzner.com, check if you can visit api.hetzner.com, if the operation is still in progress or may finished or retry. Server remains AS IS."
+    echo "[FATAL ERROR] You can try to create the snapshot (Name it ) by yourself, and delete the server within the Webinterface."
+    echo "[FATAL ERROR] You ask for help via Issue, contact us on social media or contact Hetzner (Not for Script Bugs :o)."
+    exit 1
+  else
+    echo "I will keep trying it 10 Times with a 180 second hold."
+    sleep 180
+    return
+  fi
+
 }
 
 # create from snapshot, update DNS
 create() {
-  if [ "$2" == "latest" ]; then
+  if [ "$2" != "latest" ]; then
     hcloud image list | grep snapshot | grep $SERVERNAME
     read -n 1 -p -r "Select Snapshot ID: \"$SNAPID\""
   else
@@ -69,16 +96,16 @@ create() {
   fi
 
   if [ "$SNAPID" == "" ]; then
+    echo "Sorry I was not able to fetch any Snapshot. Execute hcloud image list for a list."
     exit 1
   fi
 
     if [ "$SSHKEY" == "" ]; then
-      echo "We recommend setting up an ssh key so you won't get any emails everytime you create a new server."
-      hcloud server create --datacenter "$DATACENTER" --image "$SNAPID" --name "$SERVERNAME" --type "$SERVERTYPE"
-    else
-      hcloud server create --datacenter "$DATACENTER" --image "$SNAPID" --name "$SERVERNAME" --type "$SERVERTYPE" --ssh-key "$SSHKEY"
+      SSHKEY="--ssh-key $SSHKEY"
+      echo "We recommend you setting up an ssh key so you won't get any emails everytime you create a new Windows server and ofcourse better security."
     fi
-  updateip
+      hcloud server create --datacenter "$DATACENTER" --image "$SNAPID" --name "$SERVERNAME" --type "$SERVERTYPE" "$SSHKEY"
+      updateip
 }
 
 # check server status
@@ -102,7 +129,7 @@ ip() {
 # update IP DynDNS
 updateip() {
   #Don't display this message after server creation
-  if [ "$TOKEN" != "" && "$IPV4" != "127.0.0.1" ]; then
+  if [ "$TOKEN" != "" ] && [ "$IPV4" != "127.0.0.1" ]; then
     echo "You expect that I can update your dynv6.com IP without credentials like Harry Potter? Sorry I can't do that for you :("
     exit 1
   elif [ "$IPV4" == "" ]; then
