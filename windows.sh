@@ -16,25 +16,47 @@ TOKEN='' #Enter Token from dynv6.net
 
 ### END OF SETTINGS ###
 
-STATUS=$(hcloud server list | tail -1 | grep "$SERVERNAME" | awk '{print $3;}')
+if [ -f env_override.conf ]; then
+    source env_override.conf
+fi
+
+if ! ping -q -c 1 api.hetzner.cloud > /dev/null; then echo "[FATAL] Unable to ping Hetzner API! Without Internet we can't do anything for you :o" | exit 1; fi
+
 ID=$(hcloud server list | tail -1 | grep "$SERVERNAME" | awk '{print $1;}')
+
+STATUS=$(hcloud server list | tail -1 | grep "$SERVERNAME" | awk '{print $3;}')
 IPV4=$(hcloud server list | tail -1 | grep "$SERVERNAME" | awk '{print $4;}')
 SSHKEY=$(hcloud ssh-key list | tail -1 | awk '{print $1;}')
 CONTEXT=$(hcloud context active)
-
-if [ "" ]
 
 #Check context (Project)
 if [ "$CONTEXT" != "$PROJECTNAME" ]; then
   echo "[CRIT] Aborting, wrong active Hetzner cloud context"
   echo "To see all available context's (Projects) enter hcloud context list"
   echo "To change the active context to the defined one within this script enter hcloud context use \"$PROJECTNAME\""
-  exit
+  exit 1
 fi
 
 # stop, force stop, snapshot, delete
 delete() {
   status
+  shutdown
+  make_snapshot
+
+  echo "Deleting Server \"$ID\""
+  exec "hcloud server delete $SERVERNAME" 10 5 "deleting server"
+  IPV4="127.0.0.1" #Overwrite IP, server is gone
+  updateip
+}
+
+# create snapshot
+make_snapshot() {
+  status
+  echo "Creating snapshot..."
+  exec "hcloud server create-image --type snapshot --description \"$(date '+'$SERVERNAME'-%Y-%m-%d_%H-%M')\" $SERVERNAME" 10 5 "snapshot creation"
+}
+
+shutdown() {
   echo "Shuting down server"
   if ! hcloud server shutdown $SERVERNAME
   then
@@ -45,45 +67,34 @@ delete() {
     hcloud server poweroff $SERVERNAME
   fi
 
-  echo "Creating snapshot..."
-  make_snapshot
-
-  echo "Deleting Server \"$ID\""
-  hcloud server delete $SERVERNAME
-  IPV4="127.0.0.1" #Overwrite IP server is gone
-  updateip
 }
 
-# create snapshot
-make_snapshot() {
-  status
-  for i in $(seq 1 11)
-  do
-    if ! hcloud server create-image $SERVERNAME --type snapshot --description "$(date '+Windows-%Y-%m-%d_%H-%M')"
-    then
-      echo "[CRIT] Snapshot creation failed!"
-      recovery "$i"
-    else
-      continue
-    fi
-  done
-}
+exec () {
+  #COMMAND, TRYCOUNTER, SLEEP, OPERATION
+    COMMAND=$1
+    TRYCOUNTER=$2
+    SLEEPCOUNTER=$3
+    OPERATION=$4
 
-recovery () {
-  if ! ping -q -c 1 api.hetzner.cloud > /dev/null; then echo "[CRIT] Unable to ping Hetzner API!"; fi
-  if [ "$1" == "10" ]
-  then
-    echo "[FATAL ERROR] ABORTING! I AM SO SORRY. I was not able to recover from this bad situation."
-    echo "[FATAL ERROR] Please check status.hetzner.com, check if you can visit api.hetzner.com, if the operation is still in progress or may finished or retry. Server remains AS IS."
-    echo "[FATAL ERROR] You can try to create the snapshot (Name it ) by yourself, and delete the server within the Webinterface."
-    echo "[FATAL ERROR] You ask for help via Issue, contact us on social media or contact Hetzner (Not for Script Bugs :o)."
-    exit 1
-  else
-    echo "I will keep trying it 10 Times with a 180 second hold."
-    sleep 180
-    return
-  fi
-
+    for i in $(seq 1 $TRYCOUNTER)
+    do
+      if ! command $COMMAND
+      then
+        echo "[CRIT] \"$OPERATION\" failed!"
+        if ! ping -q -c 1 api.hetzner.cloud > /dev/null; then echo "[CRIT] Unable to ping Hetzner API!"; fi
+        if [ "$i" != "$TRYCOUNTER" ]; then
+          echo "I will keep trying it \"$TRYCOUNTER\" Times with a \"$SLEEPCOUNTER\" second pause."
+          sleep $SLEEPCOUNTER
+        fi
+      else
+        return
+      fi
+    done
+  echo "[FATAL ERROR] ABORTING! I AM SO SORRY. I was not able to recover from this bad situation."
+  echo "[FATAL ERROR] Please check status.hetzner.com, check if you can visit api.hetzner.com, if the operation is still in progress or may finished or retry. Server remains AS IS."
+  echo "[FATAL ERROR] You can try to create the snapshot (Name it ) by yourself, and delete the server within the Webinterface."
+  echo "[FATAL ERROR] You ask for help via Issue, contact us on social media or contact Hetzner (Not for Script Bugs :o)."
+  exit 1
 }
 
 # create from snapshot, update DNS
@@ -100,12 +111,12 @@ create() {
     exit 1
   fi
 
-    if [ "$SSHKEY" == "" ]; then
-      SSHKEY="--ssh-key $SSHKEY"
-      echo "We recommend you setting up an ssh key so you won't get any emails everytime you create a new Windows server and ofcourse better security."
-    fi
-      hcloud server create --datacenter "$DATACENTER" --image "$SNAPID" --name "$SERVERNAME" --type "$SERVERTYPE" "$SSHKEY"
-      updateip
+  if [ "$SSHKEY" == "" ]; then
+    SSHKEY="--ssh-key $SSHKEY"
+    echo "We recommend you setting up an ssh key so you won't get any emails everytime you create a new Windows server and ofcourse better security."
+  fi
+    exec "hcloud server create --datacenter "$DATACENTER" --image "$SNAPID" --name "$SERVERNAME" --type "$SERVERTYPE" "$SSHKEY"" 10 5 "creating server"
+    updateip
 }
 
 # check server status
@@ -141,17 +152,48 @@ updateip() {
   fi
 }
 
+updatehosts() {
+  OS=$(uname)
+  #Do we need Windows? :D
+  case $OS in
+    'Linux')
+      HOSTS="/etc/hosts"
+    ;;
+    'WindowsNT')
+      HOSTS="/etc/hosts"
+    ;;
+    'Darwin')
+      HOSTS="/etc/hosts"
+    ;;
+    *)
+    echo "Unknown Operating System :o"
+    ;;
+esac
+  if [ $(< $HOSTS grep hetznercloud) != "" ]
+  then
+    #Update
+    sudo sed -i 's/hetznercloud/c\\"$IP\" hetznercloud' $HOSTS #Broken
+  else
+    #Insert
+    sudo echo "$IP hetznercloud" | sudo tee -a $HOSTS
+  fi
+}
+
+
 # help menu
 help() {
 echo "Help menu:
 
  start    - to recreate the server from snapshot and start it.
  stop     - to stop the server and delte it after creating a snapshot.
+ shutdown - Shutdown the server.
  snapshot - to create a snapshot.
  status   - to see server status.
  ip       - to show the server IP
  updateip - to update the DynDNS IP"
 }
+
+echo "$1"
 
 case "$1" in
 start)

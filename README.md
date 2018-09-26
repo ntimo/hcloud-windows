@@ -66,6 +66,7 @@ Issues, Pull Requests and Wiki additions are very welcome 😊
 ```text
  start    - to recreate the server from snapshot and start it.
  stop     - to stop the server and delte it after creating a snapshot.
+ shutdown - Shutdown the server
  snapshot - to create a snapshot.
  status   - to see server status.
  ip       - to show the server IP
